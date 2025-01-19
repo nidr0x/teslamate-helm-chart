@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "teslamate.fullname" . }}-ingress-test"
+  labels:
+    app.kubernetes.io/name: {{ include "teslamate.name" . }}
+    helm.sh/chart: {{ include "teslamate.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: curl
+      image: curlimages/curl:latest
+      command: ['curl']
+      args:
+        - -s
+        - -o
+        - /dev/null
+        - -w
+        - "%{http_code}"
+        {{- if .Values.ingress.hosts }}
+        - {{ (index .Values.ingress.hosts 0) }}{{ .Values.ingress.path }}
+        {{- else }}
+        - "localhost:4000"
+        {{- end }}
+  restartPolicy: Never
