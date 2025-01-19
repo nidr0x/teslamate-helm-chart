@@ -1,0 +1,58 @@
+name: Release Chart
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "charts/**"
+      - ".github/workflows/release-chart.yml"
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Cache Helm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            charts/teslamate/charts
+          key: ${{ runner.os }}-helm-dependencies-${{ hashFiles('charts/teslamate/Chart.yaml', 'charts/teslamate/requirements.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-helm-dependencies-
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+
+      - name: Update Helm repositories
+        run: helm repo update
+
+      - name: Update Helm dependencies
+        run: helm dependency update charts/teslamate
+
+      - name: Lint Chart
+        run: helm lint charts/teslamate
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
