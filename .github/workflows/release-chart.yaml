@@ -9,10 +9,12 @@ on:
       - ".github/workflows/release-chart.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
