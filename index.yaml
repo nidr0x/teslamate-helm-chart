@@ -1,0 +1,27 @@
+apiVersion: v1
+entries:
+  teslamate:
+  - apiVersion: v2
+    appVersion: v1.32.0
+    created: "2025-03-15T16:37:59.748330766Z"
+    dependencies:
+    - name: grafana
+      repository: https://grafana.github.io/helm-charts
+      version: 8.8.2
+    description: "A self-hosted data logger for your Tesla \U0001F698"
+    digest: fcb80fc1d70c5040c9412eabc6c7a97292c0972b27ff05a70b2e9364979eba69
+    home: https://github.com/nidr0x/teslamate-helm-chart
+    icon: https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Tesla_Motors.svg/793px-Tesla_Motors.svg.png
+    keywords:
+    - teslamate
+    - tesla
+    maintainers:
+    - email: nidr0x@gmail.com
+      name: Carlos Rodríguez
+    name: teslamate
+    sources:
+    - https://github.com/teslamate-org/teslamate
+    urls:
+    - https://github.com/nidr0x/teslamate-helm-chart/releases/download/teslamate-v0.1.2/teslamate-v0.1.2.tgz
+    version: v0.1.2
+generated: "2025-03-15T16:37:59.748352586Z"
