@@ -9,6 +9,26 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
 timeZone: UTC
 
 # The customPostgreSQL configuration allows users to specify a custom PostgreSQL database for TeslaMate to use.
@@ -20,7 +40,26 @@ customPostgreSQL:
   host: ""
   user: ""
   password: ""
+  existingSecret: ""
+  existingSecretKey: "password"
   database: ""
+
+postgresql:
+  enabled: false
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  auth:
+    username: teslamate
+    password: "teslamate_password"
+    database: teslamate
+    existingSecret: ""
+    existingSecretKey: "password"
+  persistence:
+    enabled: true
+    size: 5Gi
+    # storageClass: ""
 
 # The MQTT function within TeslaMate allows useful values to be published to an MQTT broker.
 # This is useful in allowing other automation platforms to consume data from TeslaMate.
@@ -31,6 +70,8 @@ mqtt:
   host:
   username:
   password:
+  existingSecret: ""
+  existingSecretKey: "password"
 
   # Enables TLS (true/false)
   tls:
@@ -124,3 +165,46 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+grafana:
+  enabled: true
+  dashboards:
+    default:
+      teslamate-battery-health:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/battery-health.json
+      teslamate-charge-level:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charge-level.json
+      teslamate-charges:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charges.json
+      teslamate-charging-stats:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charging-stats.json
+      teslamate-database-info:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/database-info.json
+      teslamate-drive-stats:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/drive-stats.json
+      teslamate-drives:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/drives.json
+      teslamate-efficiency:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/efficiency.json
+      teslamate-locations:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/locations.json
+      teslamate-mileage:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/mileage.json
+      teslamate-overview:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/overview.json
+      teslamate-projected-range:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/projected-range.json
+      teslamate-states:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/states.json
+      teslamate-statistics:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/statistics.json
+      teslamate-timeline:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/timeline.json
+      teslamate-trip:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/trip.json
+      teslamate-updates:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/updates.json
+      teslamate-vampire-drain:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/vampire-drain.json
+      teslamate-visited:
+        url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/visited.json

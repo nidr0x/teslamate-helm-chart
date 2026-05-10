@@ -15,24 +15,65 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         app.kubernetes.io/name: {{ include "teslamate.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
+      serviceAccountName: {{ include "teslamate.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion | trimPrefix "v" }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           env:
-            {{- if (default false .Values.customPostgreSQL.enabled) }}
+            {{- if .Values.postgresql.enabled }}
+            - name: DATABASE_HOST
+              value: {{ printf "%s-postgresql" .Release.Name | quote }}
+            {{- else if (default false .Values.customPostgreSQL.enabled) }}
             - name: DATABASE_HOST
               value: {{  required "customPostgreSQL.host is required" .Values.customPostgreSQL.host | quote }}
             {{- end }}
+            {{- if .Values.postgresql.enabled }}
+            - name: DATABASE_USER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            {{- if .Values.postgresql.auth.existingSecret }}
+            - name: DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.auth.existingSecret }}
+                  key: {{ default "password" .Values.postgresql.auth.existingSecretKey }}
+            {{- else }}
+            - name: DATABASE_PASS
+              value: {{ .Values.postgresql.auth.password | quote }}
+            {{- end }}
+            - name: DATABASE_NAME
+              value: {{ .Values.postgresql.auth.database | quote }}
+            {{- else }}
             {{- if .Values.customPostgreSQL.user }}
             - name: DATABASE_USER
               value: {{  required "customPostgreSQL.user is required" .Values.customPostgreSQL.user | quote }}
             {{- end }}
-            {{- if .Values.customPostgreSQL.password }}
+            {{- if .Values.customPostgreSQL.existingSecret }}
+            - name: DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.customPostgreSQL.existingSecret }}
+                  key: {{ default "password" .Values.customPostgreSQL.existingSecretKey }}
+            {{- else if .Values.customPostgreSQL.password }}
             - name: DATABASE_PASS
               value: {{  required "customPostgreSQL.password is required" .Values.customPostgreSQL.password | quote }}
             {{- end }}
@@ -40,13 +81,22 @@ spec:
             - name: DATABASE_NAME
               value: {{  required "customPostgreSQL.database is required" .Values.customPostgreSQL.database | quote }}
             {{- end }}
+            {{- end }}
             {{- if .Values.mqtt.enabled }}
             - name: MQTT_HOST
               value: {{ .Values.mqtt.host | quote }}
             - name: MQTT_USERNAME
               value: {{ .Values.mqtt.username | quote }}
+            {{- if .Values.mqtt.existingSecret }}
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mqtt.existingSecret }}
+                  key: {{ default "password" .Values.mqtt.existingSecretKey }}
+            {{- else }}
             - name: MQTT_PASSWORD
               value: {{ .Values.mqtt.password | quote }}
+            {{- end }}
             - name: MQTT_TLS
               value: {{ .Values.mqtt.tls | quote }}
             - name: MQTT_TLS_ACCEPT_INVALID_CERTS
