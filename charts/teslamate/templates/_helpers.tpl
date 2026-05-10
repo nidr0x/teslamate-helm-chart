@@ -53,3 +53,14 @@ Selector labels
 app.kubernetes.io/name: {{ include "teslamate.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "teslamate.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+    {{ default (include "teslamate.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+    {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
+{{- end -}}
