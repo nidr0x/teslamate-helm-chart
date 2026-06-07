@@ -1,0 +1,6 @@
+# Helm dependencies
+charts/teslamate/charts/
+*.tgz
+
+# OS files
+.DS_Store
