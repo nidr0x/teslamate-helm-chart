@@ -54,6 +54,27 @@ jobs:
       - name: Lint Chart
         run: helm lint charts/teslamate
 
+      - name: Ensure gh-pages branch exists
+        run: |
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          worktree_dir="$(mktemp -d)"
+
+          git worktree add --detach "$worktree_dir"
+
+          pushd "$worktree_dir"
+          git switch --orphan gh-pages
+          git rm -rf . >/dev/null 2>&1 || true
+          touch .nojekyll index.yaml
+          git add .nojekyll index.yaml
+          git commit -m "chore: initialize gh-pages branch"
+          git push origin gh-pages
+          popd
+
+          git worktree remove --force "$worktree_dir"
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         env:
