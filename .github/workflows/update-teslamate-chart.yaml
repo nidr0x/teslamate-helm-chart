@@ -1,0 +1,117 @@
+name: Update TeslaMate chart
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest stable TeslaMate release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$(curl --fail --silent --show-error --location \
+            https://api.github.com/repos/teslamate-org/teslamate/releases/latest \
+            | jq --exit-status --raw-output '.tag_name | select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))')"
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Update chart metadata
+        id: update
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          chart = Path("charts/teslamate/Chart.yaml")
+          lines = chart.read_text(encoding="utf-8").splitlines()
+
+          def field_index(name):
+              matches = [i for i, line in enumerate(lines) if line.startswith(f"{name}:")]
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected one top-level {name} field in {chart}")
+              return matches[0]
+
+          app_index = field_index("appVersion")
+          chart_index = field_index("version")
+          current_app = lines[app_index].split(":", 1)[1].strip().strip("'\"")
+          release_tag = os.environ["RELEASE_TAG"]
+
+          release_version = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", release_tag)
+          current_version = re.fullmatch(r"v?(\d+)\.(\d+)\.(\d+)", current_app)
+          if not release_version or not current_version:
+              raise SystemExit(f"Expected stable semantic versions, got {current_app!r} and {release_tag!r}")
+
+          release_parts = tuple(map(int, release_version.groups()))
+          current_parts = tuple(map(int, current_version.groups()))
+          if release_parts <= current_parts:
+              print(f"No newer TeslaMate release: chart={current_app}, upstream={release_tag}")
+              with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+                  output.write("changed=false\n")
+              raise SystemExit(0)
+
+          current_chart = lines[chart_index].split(":", 1)[1].strip().strip("'\"")
+          chart_version = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", current_chart)
+          if not chart_version:
+              raise SystemExit(f"Expected a stable semantic chart version, got {current_chart!r}")
+
+          major, minor, patch = map(int, chart_version.groups())
+          next_chart = f"{major}.{minor}.{patch + 1}"
+          lines[app_index] = f"appVersion: {release_tag}"
+          lines[chart_index] = f"version: {next_chart}"
+          chart.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print(f"Updating TeslaMate {current_app} -> {release_tag}; chart {current_chart} -> {next_chart}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("changed=true\n")
+          PY
+
+      - name: Install Helm
+        if: steps.update.outputs.changed == 'true'
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Add Helm repositories
+        if: steps.update.outputs.changed == 'true'
+        run: helm repo add grafana https://grafana.github.io/helm-charts
+
+      - name: Update Helm repositories
+        if: steps.update.outputs.changed == 'true'
+        run: helm repo update
+
+      - name: Update Helm dependencies
+        if: steps.update.outputs.changed == 'true'
+        run: helm dependency update charts/teslamate
+
+      - name: Lint chart
+        if: steps.update.outputs.changed == 'true'
+        run: helm lint charts/teslamate
+
+      - name: Open update pull request
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-teslamate-version
+          delete-branch: true
+          commit-message: "chore: update TeslaMate chart to ${{ steps.release.outputs.tag }}"
+          title: "chore: update TeslaMate chart to ${{ steps.release.outputs.tag }}"
+          body: |
+            Updates the default TeslaMate image version to `${{ steps.release.outputs.tag }}` and bumps the chart patch version.
+
+            `helm lint charts/teslamate` passed in this workflow.
