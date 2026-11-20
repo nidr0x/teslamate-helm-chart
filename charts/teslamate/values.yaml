@@ -48,7 +48,7 @@ postgresql:
   enabled: false
   image:
     repository: postgres
-    tag: "16"
+    tag: "19"
     pullPolicy: IfNotPresent
   auth:
     username: teslamate
